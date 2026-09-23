@@ -1,0 +1,102 @@
+:root {
+  --bg: #f7f7f8;
+  --surface: #fff;
+  --text: #17181a;
+  --muted: #62666d;
+  --line: #e1e3e7;
+  --brand: #3b5bdb;
+  --danger: #c02626;
+  --ok: #1b7f4b;
+  --on-brand: #fff;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111214;
+    --surface: #1b1d20;
+    --text: #e9eaec;
+    --muted: #a0a5ad;
+    --line: #2c2f34;
+    --brand: #8da2fb;
+    --danger: #f2a2a2;
+    --ok: #74d7a3;
+    --on-brand: #101425;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 16px 64px;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+}
+
+header, main { max-width: 760px; margin: 0 auto; }
+h1 { margin: 0 0 4px; font-size: 1.5rem; }
+header p { margin: 0 0 4px; color: var(--muted); }
+.local { font-size: .9rem; color: var(--ok); }
+
+#zone {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  margin: 20px 0 12px;
+  padding: 40px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+  cursor: pointer;
+}
+#zone.over { border-color: var(--brand); background: var(--surface); }
+#zone span { color: var(--muted); font-size: .9rem; }
+
+button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--brand);
+  color: var(--on-brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty { color: var(--muted); text-align: center; }
+
+.card {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.badge { flex: none; padding: 3px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; }
+.badge.danger { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.badge.warn { background: color-mix(in srgb, var(--brand) 18%, transparent); color: var(--brand); }
+.badge.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+
+.grid { display: grid; gap: 12px; }
+@media (min-width: 620px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+.grid section { padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+h3 { margin: 0 0 8px; font-size: .85rem; color: var(--muted); font-weight: 600; }
+
+dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: .92rem; }
+dt { color: var(--muted); }
+dd { margin: 0; word-break: break-all; }
+dd.hot { color: var(--danger); font-weight: 600; }
+dd.gone { color: var(--ok); font-weight: 600; }
+
+.pending { margin: 0; color: var(--muted); font-size: .9rem; }
+.after button { margin-top: 12px; width: 100%; }

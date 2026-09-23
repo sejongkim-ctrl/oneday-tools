@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>사진 위치정보 지우개</title>
+  <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>사진 위치정보 지우개</h1>
+    <p>사진에는 찍은 위치와 기기 정보가 같이 저장돼요. 올리기 전에 지우세요.</p>
+    <p class="local">파일은 이 브라우저 안에서만 처리돼요. 어디로도 전송하지 않아요.</p>
+  </header>
+
+  <main>
+    <label id="zone" for="picker">
+      <strong>사진을 끌어다 놓기</strong>
+      <span>또는 눌러서 고르기 (JPG, PNG)</span>
+      <input id="picker" type="file" accept="image/jpeg,image/png" multiple hidden>
+    </label>
+
+    <button id="download-all" type="button" hidden>전부 내려받기</button>
+
+    <p id="empty" class="empty">아직 넣은 사진이 없어요.</p>
+    <div id="files"></div>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

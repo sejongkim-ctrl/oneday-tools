@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>하루 하나 도구</title>
+  <meta name="description" content="하루에 하나씩 만드는 작은 브라우저 도구 모음">
+  <style>
+    :root { --bg:#f7f7f8; --surface:#fff; --text:#17181a; --muted:#62666d; --line:#e1e3e7; --brand:#3b5bdb; color-scheme: light; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#111214; --surface:#1b1d20; --text:#e9eaec; --muted:#a0a5ad; --line:#2c2f34; --brand:#8da2fb; color-scheme: dark; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:32px 16px 64px; background:var(--bg); color:var(--text);
+      font:16px/1.55 -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; }
+    header, main { max-width: 640px; margin: 0 auto; }
+    h1 { margin:0 0 4px; font-size:1.5rem; }
+    header p { margin:0 0 20px; color:var(--muted); }
+    a.tool { display:block; margin-bottom:12px; padding:16px; border:1px solid var(--line); border-radius:14px;
+      background:var(--surface); color:inherit; text-decoration:none; }
+    a.tool:hover { border-color: var(--brand); }
+    .row { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+    .row b { font-size:1.05rem; }
+    .date { flex:none; color:var(--muted); font-size:.85rem; }
+    .tool p { margin:4px 0 0; color:var(--muted); font-size:.92rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>하루 하나 도구</h1>
+    <p>하루에 하나씩 만드는 작은 도구. 전부 브라우저 안에서만 돌아가고, 파일은 기기 밖으로 나가지 않아요.</p>
+  </header>
+  <main>
+    <a class="tool" href="exif-cleaner/">
+      <span class="row"><b>사진 위치정보 지우개</b><span class="date">2026-09-23</span></span>
+      <p>사진에 남은 촬영 위치와 기기 정보를 지워요. 화질은 그대로 둬요.</p>
+    </a>
+  </main>
+</body>
+</html>
