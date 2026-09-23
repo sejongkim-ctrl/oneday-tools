@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>사진 위치정보 지우개</title>
+  <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다">
+  <style>/*__CSS__*/</style>
+</head>
+<body>
+  <header>
+    <h1>사진 위치정보 지우개</h1>
+    <p class="lead">사진에는 찍은 장소와 기기 정보가 같이 저장돼요. 올리기 전에 지우세요.</p>
+    <p class="privacy"><span aria-hidden="true">🔒</span> 사진은 이 컴퓨터 안에서만 처리돼요. 인터넷으로 전송하지 않아요.</p>
+  </header>
+
+  <main>
+    <section id="step1">
+      <div id="zone">
+        <svg viewBox="0 0 48 48" aria-hidden="true" class="zone-icon">
+          <path d="M8 34l9-10 7 8 5-5 11 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+          <rect x="6" y="10" width="36" height="28" rx="4" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <circle cx="31" cy="20" r="3.5" fill="currentColor"/>
+        </svg>
+        <p class="zone-title">여기에 사진을 끌어다 놓으세요</p>
+        <p class="zone-sub">창 아무 곳에나 놓아도 돼요</p>
+        <label class="pick" for="picker">사진 고르기</label>
+        <input id="picker" type="file" accept="image/jpeg,image/png" multiple hidden>
+        <p class="zone-hint">JPG, PNG · 여러 장 한꺼번에 가능</p>
+      </div>
+    </section>
+
+    <section id="result" hidden>
+      <div class="result-head">
+        <p id="summary" role="status"></p>
+        <button id="reset" type="button" class="ghost">처음부터</button>
+      </div>
+      <div id="files"></div>
+    </section>
+
+    <details class="how">
+      <summary>어떻게 지우나요?</summary>
+      <p>사진 파일 안에는 사진 내용과 별도로 촬영 정보가 붙어 있어요. 이 도구는 그 부분만 잘라내고 사진 자체는 건드리지 않아요. 그래서 화질이 떨어지지 않아요.</p>
+      <p>세로로 찍은 사진은 예외예요. 방향 정보까지 지우면 사진이 눕기 때문에, 방향을 사진에 먼저 적용하고 다시 저장해요. 이때만 아주 약간 다시 압축돼요.</p>
+    </details>
+  </main>
+
+  <div id="drop-overlay" hidden><p>놓으면 바로 지워드려요</p></div>
+
+  <div id="bar" hidden>
+    <span id="bar-text"></span>
+    <button id="download-all" type="button">전부 내려받기</button>
+  </div>
+
+  <script type="module">/*__JS__*/</script>
+</body>
+</html>
