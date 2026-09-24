@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>사진 위치정보 지우개</title>
   <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다">
+  <!-- 외부로 나가는 통신을 브라우저 수준에서 막는다. 코드가 보내려 해도 실패한다. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src blob: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
   <style>
 :root {
   --bg: #f6f7f9;
@@ -188,6 +191,18 @@ dd.note { color: var(--muted); font-size: .85rem; }
 }
 #bar-text { font-weight: 600; color: var(--muted); }
 @media (min-width: 752px) { #bar { bottom: 16px; border: 1px solid var(--line); border-radius: 14px; } }
+
+/* 안전 안내 */
+.safety { margin-top: 28px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--ok-soft); }
+.safety h2 { margin: 0 0 10px; font-size: 1.05rem; color: var(--ok); }
+.safety ul { margin: 0; padding-left: 18px; }
+.safety li { margin-bottom: 6px; font-size: .93rem; }
+.safety li b { font-weight: 700; }
+.proof { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.proof button { background: var(--surface); }
+#net-result { font-size: .9rem; color: var(--muted); }
+#net-result.pass { color: var(--ok); font-weight: 700; }
+#net-result.fail { color: var(--danger); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -221,10 +236,25 @@ dd.note { color: var(--muted); font-size: .85rem; }
       <div id="files"></div>
     </section>
 
+    <section class="safety">
+      <h2>사진은 어디로도 가지 않아요</h2>
+      <ul>
+        <li><b>보내지 않는 게 아니라 보낼 수 없어요.</b> 이 페이지는 외부 통신이 차단돼 있어요. 만든 사람도 누가 어떤 사진을 넣었는지 알 수 없어요.</li>
+        <li><b>외부에서 불러오는 것이 하나도 없어요.</b> 글꼴, 분석 도구, 광고가 전부 없어요. 이 파일 한 장이 전부예요.</li>
+        <li><b>사진을 저장하지 않아요.</b> 브라우저 메모리에서만 처리하고, 창을 닫으면 사라져요. 쿠키도 기록도 남기지 않아요.</li>
+        <li><b>인터넷을 꺼도 그대로 동작해요.</b> 와이파이를 끄고 써보면 바로 확인돼요.</li>
+      </ul>
+      <div class="proof">
+        <button id="net-test" type="button" class="ghost">지금 외부 전송 시도해보기</button>
+        <span id="net-result" role="status"></span>
+      </div>
+    </section>
+
     <details class="how">
       <summary>어떻게 지우나요?</summary>
       <p>사진 파일 안에는 사진 내용과 별도로 촬영 정보가 붙어 있어요. 이 도구는 그 부분만 잘라내고 사진 자체는 건드리지 않아요. 그래서 화질이 떨어지지 않아요.</p>
       <p>세로로 찍은 사진은 예외예요. 방향 정보까지 지우면 사진이 눕기 때문에, 방향을 사진에 먼저 적용하고 다시 저장해요. 이때만 아주 약간 다시 압축돼요.</p>
+      <p>직접 확인하고 싶다면 브라우저 개발자 도구(F12)의 네트워크 탭을 켠 채로 사진을 넣어보세요. 요청이 하나도 잡히지 않아요.</p>
     </details>
   </main>
 
@@ -461,6 +491,11 @@ const cleaned = [];
 let handled = 0;
 let hadLocation = 0;
 
+// 파일명과 사진에서 읽은 값은 사용자가 통제하지 못하는 문자열이다.
+// 화면에 넣기 전에 반드시 막아야 조작된 파일이 스크립트를 실행하지 못한다.
+const esc = (value) =>
+  String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 const KB = (n) => `${(n / 1024).toFixed(n < 10240 ? 1 : 0)}KB`;
 const coord = (v, [pos, neg]) => `${Math.abs(v).toFixed(5)}° ${v >= 0 ? pos : neg}`;
 
@@ -490,14 +525,14 @@ function card(file, meta) {
     <div class="head">
       <img class="thumb" alt="">
       <div class="head-text">
-        <b>${file.name}</b>
+        <b>${esc(file.name)}</b>
         <span class="badge ${tone}">${text}</span>
       </div>
     </div>
     <div class="grid">
       <section class="before">
         <h3>지금 이 사진에 담긴 정보</h3>
-        <dl>${rows.map(([k, v, hot]) => `<dt>${k}</dt><dd class="${hot ? 'hot' : ''}">${v}</dd>`).join('')}
+        <dl>${rows.map(([k, v, hot]) => `<dt>${esc(k)}</dt><dd class="${hot ? 'hot' : ''}">${esc(v)}</dd>`).join('')}
           <dt>항목 수</dt><dd>${meta.count}개</dd>
         </dl>
       </section>
@@ -598,6 +633,21 @@ $('#reset').addEventListener('click', () => {
   $('#result').hidden = true;
   $('#bar').hidden = true;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// 사용자가 직접 확인할 수 있게, 외부 전송을 실제로 시도해보고 막히는 것을 보여준다.
+$('#net-test').addEventListener('click', async () => {
+  const result = $('#net-result');
+  result.textContent = '시도하는 중…';
+  result.className = '';
+  try {
+    await fetch('https://example.com/upload', { method: 'POST', body: 'test' });
+    result.textContent = '전송됨. 이 화면이 보이면 알려주세요.';
+    result.className = 'fail';
+  } catch {
+    result.textContent = '차단됐어요. 이 페이지는 밖으로 아무것도 보낼 수 없어요.';
+    result.className = 'pass';
+  }
 });
 
 // 창 어디에 놓아도 받는다. 드롭 영역을 찾아 맞추는 수고를 없앤다.

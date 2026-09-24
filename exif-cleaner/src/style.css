@@ -180,3 +180,15 @@ dd.note { color: var(--muted); font-size: .85rem; }
 }
 #bar-text { font-weight: 600; color: var(--muted); }
 @media (min-width: 752px) { #bar { bottom: 16px; border: 1px solid var(--line); border-radius: 14px; } }
+
+/* 안전 안내 */
+.safety { margin-top: 28px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--ok-soft); }
+.safety h2 { margin: 0 0 10px; font-size: 1.05rem; color: var(--ok); }
+.safety ul { margin: 0; padding-left: 18px; }
+.safety li { margin-bottom: 6px; font-size: .93rem; }
+.safety li b { font-weight: 700; }
+.proof { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.proof button { background: var(--surface); }
+#net-result { font-size: .9rem; color: var(--muted); }
+#net-result.pass { color: var(--ok); font-weight: 700; }
+#net-result.fail { color: var(--danger); font-weight: 700; }

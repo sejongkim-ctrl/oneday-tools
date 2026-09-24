@@ -8,6 +8,11 @@ const cleaned = [];
 let handled = 0;
 let hadLocation = 0;
 
+// 파일명과 사진에서 읽은 값은 사용자가 통제하지 못하는 문자열이다.
+// 화면에 넣기 전에 반드시 막아야 조작된 파일이 스크립트를 실행하지 못한다.
+const esc = (value) =>
+  String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 const KB = (n) => `${(n / 1024).toFixed(n < 10240 ? 1 : 0)}KB`;
 const coord = (v, [pos, neg]) => `${Math.abs(v).toFixed(5)}° ${v >= 0 ? pos : neg}`;
 
@@ -37,14 +42,14 @@ function card(file, meta) {
     <div class="head">
       <img class="thumb" alt="">
       <div class="head-text">
-        <b>${file.name}</b>
+        <b>${esc(file.name)}</b>
         <span class="badge ${tone}">${text}</span>
       </div>
     </div>
     <div class="grid">
       <section class="before">
         <h3>지금 이 사진에 담긴 정보</h3>
-        <dl>${rows.map(([k, v, hot]) => `<dt>${k}</dt><dd class="${hot ? 'hot' : ''}">${v}</dd>`).join('')}
+        <dl>${rows.map(([k, v, hot]) => `<dt>${esc(k)}</dt><dd class="${hot ? 'hot' : ''}">${esc(v)}</dd>`).join('')}
           <dt>항목 수</dt><dd>${meta.count}개</dd>
         </dl>
       </section>
@@ -145,6 +150,21 @@ $('#reset').addEventListener('click', () => {
   $('#result').hidden = true;
   $('#bar').hidden = true;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// 사용자가 직접 확인할 수 있게, 외부 전송을 실제로 시도해보고 막히는 것을 보여준다.
+$('#net-test').addEventListener('click', async () => {
+  const result = $('#net-result');
+  result.textContent = '시도하는 중…';
+  result.className = '';
+  try {
+    await fetch('https://example.com/upload', { method: 'POST', body: 'test' });
+    result.textContent = '전송됨. 이 화면이 보이면 알려주세요.';
+    result.className = 'fail';
+  } catch {
+    result.textContent = '차단됐어요. 이 페이지는 밖으로 아무것도 보낼 수 없어요.';
+    result.className = 'pass';
+  }
 });
 
 // 창 어디에 놓아도 받는다. 드롭 영역을 찾아 맞추는 수고를 없앤다.
