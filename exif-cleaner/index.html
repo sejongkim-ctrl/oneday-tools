@@ -223,8 +223,8 @@ dd.note { color: var(--muted); font-size: .85rem; }
         <p class="zone-title">여기에 사진을 끌어다 놓으세요</p>
         <p class="zone-sub">창 아무 곳에나 놓아도 돼요</p>
         <label class="pick" for="picker">사진 고르기</label>
-        <input id="picker" type="file" accept="image/jpeg,image/png" multiple hidden>
-        <p class="zone-hint">JPG, PNG · 여러 장 한꺼번에 가능</p>
+        <input id="picker" type="file" accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif" multiple hidden>
+        <p class="zone-hint">JPG, PNG, HEIC(아이폰) · 여러 장 한꺼번에 가능</p>
       </div>
     </section>
 
@@ -364,6 +364,26 @@ function parseExifPayload(bytes, payloadStart) {
   return out;
 }
 
+// HEIC(아이폰 기본 형식)은 ISOBMFF 박스 구조다. 박스를 전부 해석하지 않고,
+// Exif 페이로드(‘Exif\0\0’ 뒤에 TIFF 헤더가 오는 자리)를 찾아 같은 파서로 읽는다.
+const HEIC_BRANDS = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'heim', 'avif'];
+
+function isHeic(bytes) {
+  if (ascii(bytes, 4, 4) !== 'ftyp') return false;
+  return HEIC_BRANDS.includes(ascii(bytes, 8, 4).toLowerCase());
+}
+
+function findHeicExif(bytes) {
+  const limit = Math.min(bytes.length - 12, 4 * 1024 * 1024);
+  for (let at = 0; at < limit; at++) {
+    if (bytes[at] !== 0x45) continue; // 'E'
+    if (ascii(bytes, at, 6) !== 'Exif\0\0') continue;
+    const tiff = ascii(bytes, at + 6, 2);
+    if (tiff === 'MM' || tiff === 'II') return at;
+  }
+  return -1;
+}
+
 const PNG_PRIVACY_CHUNKS = ['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME'];
 
 function pngChunks(bytes) {
@@ -383,7 +403,14 @@ function pngChunks(bytes) {
 }
 
 // { kind, gps, dateTime, make, model, software, orientation, count } 형태로 돌려준다.
+// kind: 'jpeg' | 'png' | 'heic' | 'unknown'
 function readMetadata(bytes) {
+  if (isHeic(bytes)) {
+    const at = findHeicExif(bytes);
+    if (at < 0) return { kind: 'heic', count: 0 };
+    return { ...parseExifPayload(bytes, at), kind: 'heic' };
+  }
+
   const segments = jpegSegments(bytes);
   if (segments) {
     const found = { kind: 'jpeg', count: 0 };
@@ -402,6 +429,87 @@ function readMetadata(bytes) {
     return { kind: 'png', count: privacy.length };
   }
   return { kind: 'unknown', count: 0 };
+}
+
+
+// HEIC의 meta 박스에서 Exif·XMP 항목이 파일 어디에 들어 있는지 찾는다.
+// iinf(항목 목록)에서 항목 번호를, iloc(위치표)에서 그 번호의 오프셋·길이를 읽는다.
+function heicItems(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset);
+
+  function boxes(start, end, full = false) {
+    const out = [];
+    let at = full ? start + 4 : start;
+    while (at + 8 <= end) {
+      const size = view.getUint32(at);
+      const type = ascii(bytes, at + 4, 4);
+      if (size < 8 || at + size > end) break;
+      out.push({ type, start: at, body: at + 8, end: at + size });
+      at += size;
+    }
+    return out;
+  }
+
+  const meta = boxes(0, bytes.length).find((b) => b.type === 'meta');
+  if (!meta) return [];
+  const children = boxes(meta.body, meta.end, true);
+
+  // iinf: 항목 번호 → 종류
+  const kinds = new Map();
+  const iinf = children.find((b) => b.type === 'iinf');
+  if (iinf) {
+    const version = view.getUint8(iinf.body);
+    const countSize = version === 0 ? 2 : 4;
+    const listStart = iinf.body + 4 + countSize;
+    for (const entry of boxes(listStart, iinf.end)) {
+      if (entry.type !== 'infe') continue;
+      const v = view.getUint8(entry.body);
+      const idAt = entry.body + 4;
+      const id = v < 2 ? view.getUint16(idAt) : v === 2 ? view.getUint16(idAt) : view.getUint32(idAt);
+      const typeAt = idAt + (v === 3 ? 4 : 2) + 2;
+      kinds.set(id, ascii(bytes, typeAt, 4));
+    }
+  }
+
+  // iloc: 항목 번호 → 파일 안 위치
+  const iloc = children.find((b) => b.type === 'iloc');
+  if (!iloc) return [];
+  const version = view.getUint8(iloc.body);
+  let at = iloc.body + 4;
+  const sizes = view.getUint8(at);
+  const offsetSize = sizes >> 4;
+  const lengthSize = sizes & 15;
+  const baseSize = view.getUint8(at + 1) >> 4;
+  const indexSize = version >= 1 ? view.getUint8(at + 1) & 15 : 0;
+  at += 2;
+  const count = version < 2 ? view.getUint16(at) : view.getUint32(at);
+  at += version < 2 ? 2 : 4;
+
+  const read = (pos, size) =>
+    size === 4 ? view.getUint32(pos) : size === 8 ? Number(view.getBigUint64(pos)) : size === 2 ? view.getUint16(pos) : 0;
+
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const id = version < 2 ? view.getUint16(at) : view.getUint32(at);
+    at += version < 2 ? 2 : 4;
+    const method = version >= 1 ? view.getUint16(at) & 15 : 0;
+    if (version >= 1) at += 2;
+    at += 2; // data_reference_index
+    const base = read(at, baseSize);
+    at += baseSize;
+    const extents = view.getUint16(at);
+    at += 2;
+    for (let e = 0; e < extents; e++) {
+      at += indexSize;
+      const offset = read(at, offsetSize);
+      at += offsetSize;
+      const length = read(at, lengthSize);
+      at += lengthSize;
+      // method 0(파일 안 위치)만 다룬다. idat에 들어간 경우는 건드리지 않는다.
+      if (method === 0) items.push({ id, kind: kinds.get(id) ?? '', start: base + offset, length });
+    }
+  }
+  return items;
 }
 
 // ---- strip.js
@@ -476,6 +584,38 @@ async function bakeOrientation(blob, orientation) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
 }
 
+// HEIC은 항목을 빼면 뒤쪽 위치표가 전부 어긋난다. 그래서 길이는 그대로 두고
+// Exif·XMP 항목의 내용만 0으로 덮는다. 사진 데이터(mdat의 그림 부분)는 건드리지 않는다.
+function stripHeic(bytes) {
+  const items = heicItems(bytes).filter(
+    (item) => item.kind === 'Exif' || item.kind === 'mime' || item.kind === 'xml ',
+  );
+  if (items.length === 0) return { bytes, wiped: 0 };
+
+  const out = bytes.slice();
+  let wiped = 0;
+  for (const item of items) {
+    if (item.start < 0 || item.start + item.length > out.length) continue;
+    out.fill(0, item.start, item.start + item.length);
+    wiped += 1;
+  }
+  return { bytes: out, wiped };
+}
+
+// HEIC처럼 바이트만 들어낼 수 없는 형식은 다시 그려서 JPG로 내보낸다.
+// 그림만 옮겨 담으므로 촬영 정보는 따라오지 않는다. 브라우저가 그 형식을 열 수 있어야 한다.
+async function toJpeg(blob, quality = 0.92) {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((out) => (out ? resolve(out) : reject(new Error('변환 실패'))), 'image/jpeg', quality),
+  );
+}
+
 function stripBytes(bytes, kind) {
   if (kind === 'jpeg') return stripJpeg(bytes);
   if (kind === 'png') return stripPng(bytes);
@@ -513,6 +653,7 @@ function metaRows(meta) {
 function badgeFor(meta) {
   if (meta.gps) return ['danger', '위치정보 있음'];
   if (meta.count > 0) return ['warn', '촬영 정보 있음'];
+  if (meta.kind === 'unknown') return ['warn', '확인 불가'];
   return ['ok', '지울 것 없음'];
 }
 
@@ -569,21 +710,44 @@ async function handle(file) {
 
   if (meta.kind === 'unknown') {
     after.innerHTML =
-      '<h3>지운 뒤</h3><p class="pending">JPG와 PNG만 처리할 수 있어요.<br>아이폰 HEIC 사진은 설정 → 카메라 → 포맷에서 "높은 호환성"으로 바꾸거나, 미리보기 앱에서 JPG로 내보낸 뒤 넣어주세요.</p>';
+      '<h3>지운 뒤</h3><p class="pending">이 형식은 아직 열어보지 못했어요. 안에 정보가 있는지도 확인하지 못했어요.<br>JPG, PNG, HEIC를 넣어주세요.</p>';
     updateSummary();
     return;
   }
 
-  let blob = new Blob([stripBytes(bytes, meta.kind)], { type: file.type });
-  let recompressed = false;
-  if (meta.kind === 'jpeg' && meta.orientation > 1) {
-    const baked = await bakeOrientation(blob, meta.orientation);
-    blob = new Blob([stripBytes(new Uint8Array(await baked.arrayBuffer()), 'jpeg')], { type: 'image/jpeg' });
-    recompressed = true;
+  let blob;
+  let name = file.name.replace(/(\.[^.]+)$/, '-clean$1');
+  let note = '';
+
+  if (meta.kind === 'heic') {
+    // 1순위: 형식과 화질을 그대로 두고 촬영 정보 자리만 덮어쓴다. 브라우저가 HEIC를 못 열어도 된다.
+    const { bytes: wipedBytes, wiped } = stripHeic(bytes);
+    if (wiped > 0) {
+      blob = new Blob([wipedBytes], { type: 'image/heic' });
+      note = 'HEIC 형식과 화질을 그대로 두고 촬영 정보만 지웠어요';
+    } else
+    // 2순위: 위치표를 읽지 못한 파일은 그림을 다시 그려 JPG로 내보낸다.
+    try {
+      const jpeg = await toJpeg(file);
+      blob = new Blob([stripBytes(new Uint8Array(await jpeg.arrayBuffer()), 'jpeg')], { type: 'image/jpeg' });
+      name = file.name.replace(/\.[^.]+$/, '-clean.jpg');
+      note = 'HEIC는 그대로 지울 수 없어서 JPG로 바꿔 저장했어요';
+    } catch {
+      after.innerHTML =
+        '<h3>지운 뒤</h3><p class="pending">이 HEIC 파일은 구조가 달라서 그대로 지우지 못했어요. 이 브라우저는 HEIC를 열지도 못해서 변환도 안 돼요.<br>맥의 Safari로 이 도구를 열거나, 미리보기 앱에서 파일 → 내보내기로 JPG로 저장한 뒤 넣어주세요.</p>';
+      updateSummary();
+      return;
+    }
+  } else {
+    blob = new Blob([stripBytes(bytes, meta.kind)], { type: file.type });
+    if (meta.kind === 'jpeg' && meta.orientation > 1) {
+      const baked = await bakeOrientation(blob, meta.orientation);
+      blob = new Blob([stripBytes(new Uint8Array(await baked.arrayBuffer()), 'jpeg')], { type: 'image/jpeg' });
+      note = '세로 사진이라 방향을 맞춰 다시 저장했어요';
+    }
   }
 
   const check = readMetadata(new Uint8Array(await blob.arrayBuffer()));
-  const name = file.name.replace(/(\.[^.]+)$/, '-clean$1');
   cleaned.push({ name, blob });
 
   after.innerHTML = `
@@ -592,7 +756,7 @@ async function handle(file) {
       <dt>촬영 장소</dt><dd class="${check.gps ? 'hot' : 'gone'}">${check.gps ? '남아 있음' : meta.gps ? '지워짐' : '원래 없음'}</dd>
       <dt>남은 항목</dt><dd class="${check.count ? '' : 'gone'}">${check.count}개</dd>
       <dt>용량</dt><dd>${KB(file.size)} → ${KB(blob.size)}</dd>
-      ${recompressed ? '<dt>참고</dt><dd class="note">세로 사진이라 방향을 맞춰 다시 저장했어요</dd>' : ''}
+      ${note ? `<dt>참고</dt><dd class="note">${esc(note)}</dd>` : ''}
     </dl>
     <button type="button" class="download">이 사진 내려받기</button>`;
   after.querySelector('.download').addEventListener('click', (e) => {
@@ -611,7 +775,9 @@ function download(name, blob) {
 }
 
 async function addFiles(files) {
-  const images = [...files].filter((f) => f.type.startsWith('image/'));
+  const images = [...files].filter(
+    (f) => f.type.startsWith('image/') || /\.(jpe?g|png|heic|heif)$/i.test(f.name),
+  );
   if (images.length === 0) return;
   $('#result').hidden = false;
   for (const file of images) await handle(file);

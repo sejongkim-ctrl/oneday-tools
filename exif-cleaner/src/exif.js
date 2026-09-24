@@ -95,6 +95,26 @@ function parseExifPayload(bytes, payloadStart) {
   return out;
 }
 
+// HEIC(아이폰 기본 형식)은 ISOBMFF 박스 구조다. 박스를 전부 해석하지 않고,
+// Exif 페이로드(‘Exif\0\0’ 뒤에 TIFF 헤더가 오는 자리)를 찾아 같은 파서로 읽는다.
+const HEIC_BRANDS = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'heim', 'avif'];
+
+export function isHeic(bytes) {
+  if (ascii(bytes, 4, 4) !== 'ftyp') return false;
+  return HEIC_BRANDS.includes(ascii(bytes, 8, 4).toLowerCase());
+}
+
+function findHeicExif(bytes) {
+  const limit = Math.min(bytes.length - 12, 4 * 1024 * 1024);
+  for (let at = 0; at < limit; at++) {
+    if (bytes[at] !== 0x45) continue; // 'E'
+    if (ascii(bytes, at, 6) !== 'Exif\0\0') continue;
+    const tiff = ascii(bytes, at + 6, 2);
+    if (tiff === 'MM' || tiff === 'II') return at;
+  }
+  return -1;
+}
+
 const PNG_PRIVACY_CHUNKS = ['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME'];
 
 export function pngChunks(bytes) {
@@ -114,7 +134,14 @@ export function pngChunks(bytes) {
 }
 
 // { kind, gps, dateTime, make, model, software, orientation, count } 형태로 돌려준다.
+// kind: 'jpeg' | 'png' | 'heic' | 'unknown'
 export function readMetadata(bytes) {
+  if (isHeic(bytes)) {
+    const at = findHeicExif(bytes);
+    if (at < 0) return { kind: 'heic', count: 0 };
+    return { ...parseExifPayload(bytes, at), kind: 'heic' };
+  }
+
   const segments = jpegSegments(bytes);
   if (segments) {
     const found = { kind: 'jpeg', count: 0 };
@@ -136,3 +163,83 @@ export function readMetadata(bytes) {
 }
 
 export { PNG_PRIVACY_CHUNKS };
+
+// HEIC의 meta 박스에서 Exif·XMP 항목이 파일 어디에 들어 있는지 찾는다.
+// iinf(항목 목록)에서 항목 번호를, iloc(위치표)에서 그 번호의 오프셋·길이를 읽는다.
+export function heicItems(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset);
+
+  function boxes(start, end, full = false) {
+    const out = [];
+    let at = full ? start + 4 : start;
+    while (at + 8 <= end) {
+      const size = view.getUint32(at);
+      const type = ascii(bytes, at + 4, 4);
+      if (size < 8 || at + size > end) break;
+      out.push({ type, start: at, body: at + 8, end: at + size });
+      at += size;
+    }
+    return out;
+  }
+
+  const meta = boxes(0, bytes.length).find((b) => b.type === 'meta');
+  if (!meta) return [];
+  const children = boxes(meta.body, meta.end, true);
+
+  // iinf: 항목 번호 → 종류
+  const kinds = new Map();
+  const iinf = children.find((b) => b.type === 'iinf');
+  if (iinf) {
+    const version = view.getUint8(iinf.body);
+    const countSize = version === 0 ? 2 : 4;
+    const listStart = iinf.body + 4 + countSize;
+    for (const entry of boxes(listStart, iinf.end)) {
+      if (entry.type !== 'infe') continue;
+      const v = view.getUint8(entry.body);
+      const idAt = entry.body + 4;
+      const id = v < 2 ? view.getUint16(idAt) : v === 2 ? view.getUint16(idAt) : view.getUint32(idAt);
+      const typeAt = idAt + (v === 3 ? 4 : 2) + 2;
+      kinds.set(id, ascii(bytes, typeAt, 4));
+    }
+  }
+
+  // iloc: 항목 번호 → 파일 안 위치
+  const iloc = children.find((b) => b.type === 'iloc');
+  if (!iloc) return [];
+  const version = view.getUint8(iloc.body);
+  let at = iloc.body + 4;
+  const sizes = view.getUint8(at);
+  const offsetSize = sizes >> 4;
+  const lengthSize = sizes & 15;
+  const baseSize = view.getUint8(at + 1) >> 4;
+  const indexSize = version >= 1 ? view.getUint8(at + 1) & 15 : 0;
+  at += 2;
+  const count = version < 2 ? view.getUint16(at) : view.getUint32(at);
+  at += version < 2 ? 2 : 4;
+
+  const read = (pos, size) =>
+    size === 4 ? view.getUint32(pos) : size === 8 ? Number(view.getBigUint64(pos)) : size === 2 ? view.getUint16(pos) : 0;
+
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const id = version < 2 ? view.getUint16(at) : view.getUint32(at);
+    at += version < 2 ? 2 : 4;
+    const method = version >= 1 ? view.getUint16(at) & 15 : 0;
+    if (version >= 1) at += 2;
+    at += 2; // data_reference_index
+    const base = read(at, baseSize);
+    at += baseSize;
+    const extents = view.getUint16(at);
+    at += 2;
+    for (let e = 0; e < extents; e++) {
+      at += indexSize;
+      const offset = read(at, offsetSize);
+      at += offsetSize;
+      const length = read(at, lengthSize);
+      at += lengthSize;
+      // method 0(파일 안 위치)만 다룬다. idat에 들어간 경우는 건드리지 않는다.
+      if (method === 0) items.push({ id, kind: kinds.get(id) ?? '', start: base + offset, length });
+    }
+  }
+  return items;
+}

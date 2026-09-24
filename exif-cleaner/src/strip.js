@@ -1,6 +1,6 @@
 // 메타데이터만 잘라낸다. 화질을 지키려고 픽셀 데이터는 그대로 두고 바이트만 들어낸다.
 
-import { jpegSegments, pngChunks, PNG_PRIVACY_CHUNKS } from './exif.js';
+import { jpegSegments, pngChunks, PNG_PRIVACY_CHUNKS, heicItems } from './exif.js';
 
 // 지울 구간: Exif·XMP(APP1), Photoshop IPTC(APP13), 주석(COM).
 // 남길 구간: JFIF(APP0), 색 프로파일 ICC(APP2). 색이 틀어지는 것을 막는다.
@@ -68,6 +68,38 @@ export async function bakeOrientation(blob, orientation) {
   ctx.drawImage(bitmap, 0, 0);
   bitmap.close();
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+}
+
+// HEIC은 항목을 빼면 뒤쪽 위치표가 전부 어긋난다. 그래서 길이는 그대로 두고
+// Exif·XMP 항목의 내용만 0으로 덮는다. 사진 데이터(mdat의 그림 부분)는 건드리지 않는다.
+export function stripHeic(bytes) {
+  const items = heicItems(bytes).filter(
+    (item) => item.kind === 'Exif' || item.kind === 'mime' || item.kind === 'xml ',
+  );
+  if (items.length === 0) return { bytes, wiped: 0 };
+
+  const out = bytes.slice();
+  let wiped = 0;
+  for (const item of items) {
+    if (item.start < 0 || item.start + item.length > out.length) continue;
+    out.fill(0, item.start, item.start + item.length);
+    wiped += 1;
+  }
+  return { bytes: out, wiped };
+}
+
+// HEIC처럼 바이트만 들어낼 수 없는 형식은 다시 그려서 JPG로 내보낸다.
+// 그림만 옮겨 담으므로 촬영 정보는 따라오지 않는다. 브라우저가 그 형식을 열 수 있어야 한다.
+export async function toJpeg(blob, quality = 0.92) {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((out) => (out ? resolve(out) : reject(new Error('변환 실패'))), 'image/jpeg', quality),
+  );
 }
 
 export function stripBytes(bytes, kind) {
