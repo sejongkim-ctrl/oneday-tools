@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>사진 위치정보 지우개</title>
-  <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다">
+  <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다. 업로드 없음.">
+  <meta property="og:title" content="사진 위치정보 지우개">
+  <meta property="og:description" content="사진을 올리지 않고 브라우저 안에서 촬영 위치·기기 정보를 지웁니다.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f56d9'/%3E%3Cpath d='M16 7c-3.3 0-6 2.6-6 5.9 0 4.3 6 11.1 6 11.1s6-6.8 6-11.1C22 9.6 19.3 7 16 7z' fill='white'/%3E%3Cpath d='M11 22l10-12' stroke='%232f56d9' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- 외부로 나가는 통신을 브라우저 수준에서 막는다. 코드가 보내려 해도 실패한다. -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; img-src blob: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
@@ -193,8 +197,10 @@ dd.note { color: var(--muted); font-size: .85rem; }
 @media (min-width: 752px) { #bar { bottom: 16px; border: 1px solid var(--line); border-radius: 14px; } }
 
 /* 안전 안내 */
-.safety { margin-top: 28px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--ok-soft); }
-.safety h2 { margin: 0 0 10px; font-size: 1.05rem; color: var(--ok); }
+.safety { margin: 0 0 16px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--ok-soft); }
+.safety .claim { margin: 0; font-weight: 700; color: var(--ok); }
+.safety summary { margin-top: 8px; color: var(--ok); font-size: .9rem; font-weight: 600; cursor: pointer; }
+.safety ul { margin: 10px 0 0; }
 .safety ul { margin: 0; padding-left: 18px; }
 .safety li { margin-bottom: 6px; font-size: .93rem; }
 .safety li b { font-weight: 700; }
@@ -203,16 +209,48 @@ dd.note { color: var(--muted); font-size: .85rem; }
 #net-result { font-size: .9rem; color: var(--muted); }
 #net-result.pass { color: var(--ok); font-weight: 700; }
 #net-result.fail { color: var(--danger); font-weight: 700; }
+
+/* 첫 화면으로 올린 안전 안내 */
+.safety { margin: 0 0 20px; }
+.safety code { padding: 1px 5px; border-radius: 5px; background: var(--surface); font-size: .88em; }
+.how h3 { margin: 14px 0 6px; font-size: .9rem; color: var(--text); }
+.how table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.how th { width: 78px; padding: 6px 8px 6px 0; color: var(--muted); text-align: left; vertical-align: top; font-weight: 600; }
+.how td { padding: 6px 0; color: var(--muted); }
+.how tr + tr th, .how tr + tr td { border-top: 1px solid var(--line); }
+
+/* 키보드 사용자를 위한 초점 표시 */
+:where(button, label.pick, summary, input, select):focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
   </style>
 </head>
 <body>
   <header>
     <h1>사진 위치정보 지우개</h1>
     <p class="lead">사진에는 찍은 장소와 기기 정보가 같이 저장돼요. 올리기 전에 지우세요.</p>
-    <p class="privacy"><span aria-hidden="true">🔒</span> 사진은 이 컴퓨터 안에서만 처리돼요. 인터넷으로 전송하지 않아요.</p>
   </header>
 
   <main>
+    <section class="safety">
+      <p class="claim"><span aria-hidden="true">🔒</span> 사진을 서버로 보내지 않아요. 보낼 수 없도록 외부 통신을 막아뒀어요.</p>
+      <details>
+        <summary>정말 안전한지 확인하기</summary>
+        <ul>
+          <li><b>보내지 않는 게 아니라 보낼 수 없어요.</b> 이 페이지는 외부 통신이 차단돼 있어요. 만든 사람도 누가 어떤 사진을 넣었는지 알 수 없어요.</li>
+          <li><b>외부에서 불러오는 것이 하나도 없어요.</b> 글꼴, 분석 도구, 광고가 전부 없어요. 이 파일 한 장이 전부예요.</li>
+          <li><b>사진을 저장하지 않아요.</b> 브라우저 메모리에서만 처리하고, 창을 닫으면 사라져요. 쿠키도 기록도 남기지 않아요.</li>
+          <li><b>인터넷을 꺼도 그대로 동작해요.</b> 와이파이를 끄고 써보면 바로 확인돼요.</li>
+          <li><b>원본 사진은 그대로 있어요.</b> 정리한 사진은 이름 뒤에 <code>-clean</code>이 붙은 새 파일로 저장돼요.</li>
+        </ul>
+        <div class="proof">
+          <button id="net-test" type="button" class="ghost">지금 외부 전송 시도해보기</button>
+          <span id="net-result" role="status"></span>
+        </div>
+      </details>
+    </section>
+
     <section id="step1">
       <div id="zone">
         <svg viewBox="0 0 48 48" aria-hidden="true" class="zone-icon">
@@ -236,25 +274,16 @@ dd.note { color: var(--muted); font-size: .85rem; }
       <div id="files"></div>
     </section>
 
-    <section class="safety">
-      <h2>사진은 어디로도 가지 않아요</h2>
-      <ul>
-        <li><b>보내지 않는 게 아니라 보낼 수 없어요.</b> 이 페이지는 외부 통신이 차단돼 있어요. 만든 사람도 누가 어떤 사진을 넣었는지 알 수 없어요.</li>
-        <li><b>외부에서 불러오는 것이 하나도 없어요.</b> 글꼴, 분석 도구, 광고가 전부 없어요. 이 파일 한 장이 전부예요.</li>
-        <li><b>사진을 저장하지 않아요.</b> 브라우저 메모리에서만 처리하고, 창을 닫으면 사라져요. 쿠키도 기록도 남기지 않아요.</li>
-        <li><b>인터넷을 꺼도 그대로 동작해요.</b> 와이파이를 끄고 써보면 바로 확인돼요.</li>
-      </ul>
-      <div class="proof">
-        <button id="net-test" type="button" class="ghost">지금 외부 전송 시도해보기</button>
-        <span id="net-result" role="status"></span>
-      </div>
-    </section>
-
     <details class="how">
       <summary>어떻게 지우나요?</summary>
       <p>사진 파일 안에는 사진 내용과 별도로 촬영 정보가 붙어 있어요. 이 도구는 그 부분만 잘라내고 사진 자체는 건드리지 않아요. 그래서 화질이 떨어지지 않아요.</p>
       <p>세로로 찍은 사진은 예외예요. 방향 정보까지 지우면 사진이 눕기 때문에, 방향을 사진에 먼저 적용하고 다시 저장해요. 이때만 아주 약간 다시 압축돼요.</p>
       <p>직접 확인하고 싶다면 브라우저 개발자 도구(F12)의 네트워크 탭을 켠 채로 사진을 넣어보세요. 요청이 하나도 잡히지 않아요.</p>
+      <h3>지우는 것과 남기는 것</h3>
+      <table>
+        <tr><th>지워요</th><td>촬영 위치(GPS), 촬영 일시, 카메라 제조사·모델, 렌즈·촬영 설정, 편집 프로그램 이름, 사진에 붙은 설명·저작권 정보(XMP·IPTC)</td></tr>
+        <tr><th>남겨요</th><td>사진 자체와 색 프로파일(ICC). 색이 틀어지는 것을 막기 위해서예요</td></tr>
+      </table>
     </details>
   </main>
 
@@ -622,6 +651,93 @@ function stripBytes(bytes, kind) {
   return bytes;
 }
 
+// ---- zip.js
+// 여러 장을 ZIP 한 개로 묶는다.
+// 브라우저가 연속 다운로드를 막아 일부가 조용히 빠지는 것을 피하려는 목적이다.
+// 사진은 이미 압축된 파일이라 압축 없이 담는다(store 방식). 외부 라이브러리가 필요 없다.
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+// ZIP은 MS-DOS 시절 형식이라 날짜·시각을 2바이트씩 눌러 담는다.
+function dosTime(date) {
+  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() >> 1);
+  const day = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { time, day };
+}
+
+function header(name, data, offset, when) {
+  const nameBytes = new TextEncoder().encode(name);
+  const { time, day } = dosTime(when);
+  const crc = crc32(data);
+
+  const local = new DataView(new ArrayBuffer(30));
+  local.setUint32(0, 0x04034b50, true);
+  local.setUint16(4, 20, true); // 풀기에 필요한 버전
+  local.setUint16(6, 0x0800, true); // 파일명 UTF-8
+  local.setUint16(8, 0, true); // 압축 없음
+  local.setUint16(10, time, true);
+  local.setUint16(12, day, true);
+  local.setUint32(14, crc, true);
+  local.setUint32(18, data.length, true);
+  local.setUint32(22, data.length, true);
+  local.setUint16(26, nameBytes.length, true);
+
+  const central = new DataView(new ArrayBuffer(46));
+  central.setUint32(0, 0x02014b50, true);
+  central.setUint16(4, 20, true);
+  central.setUint16(6, 20, true);
+  central.setUint16(8, 0x0800, true);
+  central.setUint16(10, 0, true);
+  central.setUint16(12, time, true);
+  central.setUint16(14, day, true);
+  central.setUint32(16, crc, true);
+  central.setUint32(20, data.length, true);
+  central.setUint32(24, data.length, true);
+  central.setUint16(28, nameBytes.length, true);
+  central.setUint32(42, offset, true);
+
+  return { nameBytes, local: new Uint8Array(local.buffer), central: new Uint8Array(central.buffer) };
+}
+
+// files: [{ name, blob }] → ZIP Blob
+async function zip(files, when = new Date()) {
+  const parts = [];
+  const directory = [];
+  let offset = 0;
+
+  for (const file of files) {
+    const data = new Uint8Array(await file.blob.arrayBuffer());
+    const { nameBytes, local, central } = header(file.name, data, offset, when);
+    parts.push(local, nameBytes, data);
+    directory.push(central, nameBytes);
+    offset += local.length + nameBytes.length + data.length;
+  }
+
+  const dirSize = directory.reduce((sum, part) => sum + part.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, files.length, true);
+  end.setUint16(10, files.length, true);
+  end.setUint32(12, dirSize, true);
+  end.setUint32(16, offset, true);
+
+  return new Blob([...parts, ...directory, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
 // ---- app.js
 // 진입점. 파일을 받아 메타데이터를 보여주고, 지운 뒤 결과를 확인시킨다.
 
@@ -697,7 +813,8 @@ function updateSummary() {
     : `사진 ${handled}장을 정리했어요. 위치정보는 원래 없었어요.`;
   $('#bar').hidden = done === 0;
   $('#bar-text').textContent = `정리 완료 ${done}장`;
-  $('#download-all').textContent = done > 1 ? `전부 내려받기 (${done}장)` : '내려받기';
+  $('#download-all').disabled = false;
+  $('#download-all').textContent = done > 1 ? `ZIP으로 전부 받기 (${done}장)` : '내려받기';
 }
 
 async function handle(file) {
@@ -789,7 +906,24 @@ $('#picker').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-$('#download-all').addEventListener('click', () => cleaned.forEach(({ name, blob }) => download(name, blob)));
+// 여러 장을 연달아 내려받으면 브라우저가 뒷장을 조용히 막는다. 한 묶음으로 준다.
+$('#download-all').addEventListener('click', async (e) => {
+  if (cleaned.length === 1) return download(cleaned[0].name, cleaned[0].blob);
+  const button = e.target;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = '묶는 중…';
+  try {
+    download(`사진정리-${new Date().toISOString().slice(0, 10)}.zip`, await zip(cleaned));
+    button.textContent = `${cleaned.length}장 내려받았어요`;
+  } catch (error) {
+    console.error('[zip]', error);
+    button.textContent = label;
+    $('#bar-text').textContent = '묶기에 실패했어요. 사진별 버튼으로 하나씩 받아주세요.';
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $('#reset').addEventListener('click', () => {
   cleaned.length = 0;

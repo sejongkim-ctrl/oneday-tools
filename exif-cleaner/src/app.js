@@ -2,6 +2,7 @@
 
 import { readMetadata } from './exif.js';
 import { stripBytes, bakeOrientation, toJpeg, stripHeic } from './strip.js';
+import { zip } from './zip.js';
 
 const $ = (sel) => document.querySelector(sel);
 const cleaned = [];
@@ -74,7 +75,8 @@ function updateSummary() {
     : `사진 ${handled}장을 정리했어요. 위치정보는 원래 없었어요.`;
   $('#bar').hidden = done === 0;
   $('#bar-text').textContent = `정리 완료 ${done}장`;
-  $('#download-all').textContent = done > 1 ? `전부 내려받기 (${done}장)` : '내려받기';
+  $('#download-all').disabled = false;
+  $('#download-all').textContent = done > 1 ? `ZIP으로 전부 받기 (${done}장)` : '내려받기';
 }
 
 async function handle(file) {
@@ -166,7 +168,24 @@ $('#picker').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-$('#download-all').addEventListener('click', () => cleaned.forEach(({ name, blob }) => download(name, blob)));
+// 여러 장을 연달아 내려받으면 브라우저가 뒷장을 조용히 막는다. 한 묶음으로 준다.
+$('#download-all').addEventListener('click', async (e) => {
+  if (cleaned.length === 1) return download(cleaned[0].name, cleaned[0].blob);
+  const button = e.target;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = '묶는 중…';
+  try {
+    download(`사진정리-${new Date().toISOString().slice(0, 10)}.zip`, await zip(cleaned));
+    button.textContent = `${cleaned.length}장 내려받았어요`;
+  } catch (error) {
+    console.error('[zip]', error);
+    button.textContent = label;
+    $('#bar-text').textContent = '묶기에 실패했어요. 사진별 버튼으로 하나씩 받아주세요.';
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $('#reset').addEventListener('click', () => {
   cleaned.length = 0;

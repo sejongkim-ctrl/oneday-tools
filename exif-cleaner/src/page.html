@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>사진 위치정보 지우개</title>
-  <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다">
+  <meta name="description" content="사진에 남은 촬영 위치와 기기 정보를 브라우저 안에서 지웁니다. 업로드 없음.">
+  <meta property="og:title" content="사진 위치정보 지우개">
+  <meta property="og:description" content="사진을 올리지 않고 브라우저 안에서 촬영 위치·기기 정보를 지웁니다.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f56d9'/%3E%3Cpath d='M16 7c-3.3 0-6 2.6-6 5.9 0 4.3 6 11.1 6 11.1s6-6.8 6-11.1C22 9.6 19.3 7 16 7z' fill='white'/%3E%3Cpath d='M11 22l10-12' stroke='%232f56d9' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- 외부로 나가는 통신을 브라우저 수준에서 막는다. 코드가 보내려 해도 실패한다. -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; img-src blob: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
@@ -14,10 +18,27 @@
   <header>
     <h1>사진 위치정보 지우개</h1>
     <p class="lead">사진에는 찍은 장소와 기기 정보가 같이 저장돼요. 올리기 전에 지우세요.</p>
-    <p class="privacy"><span aria-hidden="true">🔒</span> 사진은 이 컴퓨터 안에서만 처리돼요. 인터넷으로 전송하지 않아요.</p>
   </header>
 
   <main>
+    <section class="safety">
+      <p class="claim"><span aria-hidden="true">🔒</span> 사진을 서버로 보내지 않아요. 보낼 수 없도록 외부 통신을 막아뒀어요.</p>
+      <details>
+        <summary>정말 안전한지 확인하기</summary>
+        <ul>
+          <li><b>보내지 않는 게 아니라 보낼 수 없어요.</b> 이 페이지는 외부 통신이 차단돼 있어요. 만든 사람도 누가 어떤 사진을 넣었는지 알 수 없어요.</li>
+          <li><b>외부에서 불러오는 것이 하나도 없어요.</b> 글꼴, 분석 도구, 광고가 전부 없어요. 이 파일 한 장이 전부예요.</li>
+          <li><b>사진을 저장하지 않아요.</b> 브라우저 메모리에서만 처리하고, 창을 닫으면 사라져요. 쿠키도 기록도 남기지 않아요.</li>
+          <li><b>인터넷을 꺼도 그대로 동작해요.</b> 와이파이를 끄고 써보면 바로 확인돼요.</li>
+          <li><b>원본 사진은 그대로 있어요.</b> 정리한 사진은 이름 뒤에 <code>-clean</code>이 붙은 새 파일로 저장돼요.</li>
+        </ul>
+        <div class="proof">
+          <button id="net-test" type="button" class="ghost">지금 외부 전송 시도해보기</button>
+          <span id="net-result" role="status"></span>
+        </div>
+      </details>
+    </section>
+
     <section id="step1">
       <div id="zone">
         <svg viewBox="0 0 48 48" aria-hidden="true" class="zone-icon">
@@ -41,25 +62,16 @@
       <div id="files"></div>
     </section>
 
-    <section class="safety">
-      <h2>사진은 어디로도 가지 않아요</h2>
-      <ul>
-        <li><b>보내지 않는 게 아니라 보낼 수 없어요.</b> 이 페이지는 외부 통신이 차단돼 있어요. 만든 사람도 누가 어떤 사진을 넣었는지 알 수 없어요.</li>
-        <li><b>외부에서 불러오는 것이 하나도 없어요.</b> 글꼴, 분석 도구, 광고가 전부 없어요. 이 파일 한 장이 전부예요.</li>
-        <li><b>사진을 저장하지 않아요.</b> 브라우저 메모리에서만 처리하고, 창을 닫으면 사라져요. 쿠키도 기록도 남기지 않아요.</li>
-        <li><b>인터넷을 꺼도 그대로 동작해요.</b> 와이파이를 끄고 써보면 바로 확인돼요.</li>
-      </ul>
-      <div class="proof">
-        <button id="net-test" type="button" class="ghost">지금 외부 전송 시도해보기</button>
-        <span id="net-result" role="status"></span>
-      </div>
-    </section>
-
     <details class="how">
       <summary>어떻게 지우나요?</summary>
       <p>사진 파일 안에는 사진 내용과 별도로 촬영 정보가 붙어 있어요. 이 도구는 그 부분만 잘라내고 사진 자체는 건드리지 않아요. 그래서 화질이 떨어지지 않아요.</p>
       <p>세로로 찍은 사진은 예외예요. 방향 정보까지 지우면 사진이 눕기 때문에, 방향을 사진에 먼저 적용하고 다시 저장해요. 이때만 아주 약간 다시 압축돼요.</p>
       <p>직접 확인하고 싶다면 브라우저 개발자 도구(F12)의 네트워크 탭을 켠 채로 사진을 넣어보세요. 요청이 하나도 잡히지 않아요.</p>
+      <h3>지우는 것과 남기는 것</h3>
+      <table>
+        <tr><th>지워요</th><td>촬영 위치(GPS), 촬영 일시, 카메라 제조사·모델, 렌즈·촬영 설정, 편집 프로그램 이름, 사진에 붙은 설명·저작권 정보(XMP·IPTC)</td></tr>
+        <tr><th>남겨요</th><td>사진 자체와 색 프로파일(ICC). 색이 틀어지는 것을 막기 위해서예요</td></tr>
+      </table>
     </details>
   </main>
 

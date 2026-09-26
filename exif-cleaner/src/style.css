@@ -182,8 +182,10 @@ dd.note { color: var(--muted); font-size: .85rem; }
 @media (min-width: 752px) { #bar { bottom: 16px; border: 1px solid var(--line); border-radius: 14px; } }
 
 /* 안전 안내 */
-.safety { margin-top: 28px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--ok-soft); }
-.safety h2 { margin: 0 0 10px; font-size: 1.05rem; color: var(--ok); }
+.safety { margin: 0 0 16px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--ok-soft); }
+.safety .claim { margin: 0; font-weight: 700; color: var(--ok); }
+.safety summary { margin-top: 8px; color: var(--ok); font-size: .9rem; font-weight: 600; cursor: pointer; }
+.safety ul { margin: 10px 0 0; }
 .safety ul { margin: 0; padding-left: 18px; }
 .safety li { margin-bottom: 6px; font-size: .93rem; }
 .safety li b { font-weight: 700; }
@@ -192,3 +194,18 @@ dd.note { color: var(--muted); font-size: .85rem; }
 #net-result { font-size: .9rem; color: var(--muted); }
 #net-result.pass { color: var(--ok); font-weight: 700; }
 #net-result.fail { color: var(--danger); font-weight: 700; }
+
+/* 첫 화면으로 올린 안전 안내 */
+.safety { margin: 0 0 20px; }
+.safety code { padding: 1px 5px; border-radius: 5px; background: var(--surface); font-size: .88em; }
+.how h3 { margin: 14px 0 6px; font-size: .9rem; color: var(--text); }
+.how table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.how th { width: 78px; padding: 6px 8px 6px 0; color: var(--muted); text-align: left; vertical-align: top; font-weight: 600; }
+.how td { padding: 6px 0; color: var(--muted); }
+.how tr + tr th, .how tr + tr td { border-top: 1px solid var(--line); }
+
+/* 키보드 사용자를 위한 초점 표시 */
+:where(button, label.pick, summary, input, select):focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
