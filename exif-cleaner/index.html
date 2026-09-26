@@ -224,12 +224,50 @@ dd.note { color: var(--muted); font-size: .85rem; }
   outline: 3px solid var(--brand);
   outline-offset: 2px;
 }
+
+/* 왜 필요한지 */
+.why { margin: 0 0 16px; }
+.why ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 560px) { .why ul { grid-template-columns: repeat(3, 1fr); } }
+.why li {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.why li b { display: block; font-size: .92rem; }
+.why li span { color: var(--muted); font-size: .85rem; }
+.why > p { margin: 0; color: var(--muted); font-size: .9rem; }
+.why > p b { color: var(--text); font-weight: 600; }
+
+/* 좁은 화면에서는 한 줄로 눕혀 높이를 줄인다 */
+@media (max-width: 559px) {
+  .why ul { gap: 6px; }
+  .why li { display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; }
+  .why li b { flex: none; font-size: .88rem; }
+  .why li span { font-size: .82rem; }
+}
   </style>
 </head>
 <body>
   <header>
     <h1>사진 위치정보 지우개</h1>
     <p class="lead">사진에는 찍은 장소와 기기 정보가 같이 저장돼요. 올리기 전에 지우세요.</p>
+    <section class="why">
+      <ul>
+        <li><b>찍은 장소</b><span>집 좌표가 그대로 남아요</span></li>
+        <li><b>찍은 시각</b><span>언제 어디 있었는지 드러나요</span></li>
+        <li><b>쓰는 기기</b><span>기종과 촬영 설정이 따라가요</span></li>
+      </ul>
+      <p>인스타그램과 네이버는 올릴 때 알아서 지워줘요. 하지만 <b>중고거래 사진, 카톡 원본 전송, 이메일 첨부, 파일 공유</b>는 그대로 남아요.</p>
+    </section>
   </header>
 
   <main>
