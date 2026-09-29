@@ -9,7 +9,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 const src = (name) => readFile(join(root, 'src', name), 'utf8');
 
 // 의존 순서대로 이어 붙인다. 서로만 import하므로 import/export 구문만 걷어내면 그대로 돈다.
-const MODULES = ['exif.js', 'strip.js', 'zip.js', 'app.js'];
+const MODULES = ['exif.js', 'strip.js', 'zip.js', 'save.js', 'app.js'];
 
 // 목록에 없는 모듈을 가져오면 합쳐진 결과에서 조용히 사라진다. 빌드에서 잡는다.
 function checkImports(code, name) {

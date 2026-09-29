@@ -2,7 +2,7 @@
 
 import { readMetadata } from './exif.js';
 import { stripBytes, bakeOrientation, toJpeg, stripHeic } from './strip.js';
-import { zip } from './zip.js';
+import { save, download, touch } from './save.js';
 
 const $ = (sel) => document.querySelector(sel);
 const cleaned = [];
@@ -76,7 +76,9 @@ function updateSummary() {
   $('#bar').hidden = done === 0;
   $('#bar-text').textContent = `정리 완료 ${done}장`;
   $('#download-all').disabled = false;
-  $('#download-all').textContent = done > 1 ? `ZIP으로 전부 받기 (${done}장)` : '내려받기';
+  $('#download-all').textContent = touch
+    ? (done > 1 ? `${done}장 한 번에 저장·보내기` : '사진첩에 저장·보내기')
+    : (done > 1 ? `ZIP으로 전부 받기 (${done}장)` : '내려받기');
 }
 
 async function handle(file) {
@@ -137,20 +139,18 @@ async function handle(file) {
       <dt>용량</dt><dd>${KB(file.size)} → ${KB(blob.size)}</dd>
       ${note ? `<dt>참고</dt><dd class="note">${esc(note)}</dd>` : ''}
     </dl>
-    <button type="button" class="download">이 사진 내려받기</button>`;
-  after.querySelector('.download').addEventListener('click', (e) => {
-    download(name, blob);
-    e.target.textContent = '내려받았어요';
-    e.target.classList.add('done');
+    <div class="actions">
+      <button type="button" class="download">${touch ? '사진첩에 저장·보내기' : '이 사진 내려받기'}</button>
+      ${touch ? '<button type="button" class="ghost file">파일로 받기</button>' : ''}
+    </div>`;
+  const button = after.querySelector('.download');
+  button.addEventListener('click', async () => {
+    if ((await save([{ name, blob }])) === 'cancelled') return;
+    button.textContent = touch ? '완료했어요' : '내려받았어요';
+    button.classList.add('done');
   });
+  after.querySelector('.file')?.addEventListener('click', () => download(name, blob));
   updateSummary();
-}
-
-function download(name, blob) {
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function addFiles(files) {
@@ -168,20 +168,18 @@ $('#picker').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// 여러 장을 연달아 내려받으면 브라우저가 뒷장을 조용히 막는다. 한 묶음으로 준다.
 $('#download-all').addEventListener('click', async (e) => {
-  if (cleaned.length === 1) return download(cleaned[0].name, cleaned[0].blob);
   const button = e.target;
   const label = button.textContent;
   button.disabled = true;
-  button.textContent = '묶는 중…';
+  button.textContent = cleaned.length > 1 && !touch ? '묶는 중…' : label;
   try {
-    download(`사진정리-${new Date().toISOString().slice(0, 10)}.zip`, await zip(cleaned));
-    button.textContent = `${cleaned.length}장 내려받았어요`;
+    const result = await save(cleaned);
+    button.textContent = result === 'cancelled' ? label : `${cleaned.length}장 ${result === 'shared' ? '완료했어요' : '내려받았어요'}`;
   } catch (error) {
-    console.error('[zip]', error);
+    console.error('[save]', error);
     button.textContent = label;
-    $('#bar-text').textContent = '묶기에 실패했어요. 사진별 버튼으로 하나씩 받아주세요.';
+    $('#bar-text').textContent = '한꺼번에 저장하지 못했어요. 사진별 버튼으로 하나씩 받아주세요.';
   } finally {
     button.disabled = false;
   }

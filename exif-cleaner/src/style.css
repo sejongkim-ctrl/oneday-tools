@@ -146,7 +146,7 @@ dd.gone { color: var(--ok); font-weight: 700; }
 dd.note { color: var(--muted); font-size: .85rem; }
 
 .pending { margin: 0; color: var(--muted); font-size: .9rem; }
-.after .download { width: 100%; margin-top: 14px; }
+.after .actions { margin-top: 14px; }
 
 /* 설명 */
 .how { margin-top: 28px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
@@ -239,3 +239,14 @@ dd.note { color: var(--muted); font-size: .85rem; }
   .why li b { flex: none; font-size: .88rem; }
   .why li span { font-size: .82rem; }
 }
+
+/* 폰: 끌어다 놓기 안내를 숨기고, 저장 버튼을 나란히 둔다 */
+.touch { display: none; }
+@media (pointer: coarse) {
+  .desk { display: none; }
+  .touch { display: inline; }
+}
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions .download { flex: 1 1 auto; }
+.actions .ghost { flex: none; }
+.actions .ghost { min-height: 46px; }
